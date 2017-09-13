@@ -10,8 +10,18 @@ var User = require('./app/models/user');
 var Links = require('./app/collections/links');
 var Link = require('./app/models/link');
 var Click = require('./app/models/click');
+var session = require('express-session');
+
+var bcrypt = require('bcrypt-nodejs'); // we added
+var cookieSession = require('cookie-session');
 
 var app = express();
+
+app.set('trust proxy', 1);
+app.use(cookieSession({
+  name:'session',
+  keys: ['bob']
+}))
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
@@ -23,27 +33,23 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
 
-app.get('/', 
-function(req, res) {
+app.get('/', checkUser, function(req, res) {
   res.render('index');
 });
 
-app.get('/create', 
-function(req, res) {
+app.get('/create', checkUser, function(req, res) {
   res.render('index');
 });
 
-app.get('/links', 
-function(req, res) {
+app.get('/links', checkUser, function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.status(200).send(links.models);
   });
 });
 
-app.post('/links', 
-function(req, res) {
+app.post('/links', checkUser, function(req, res) {
   var uri = req.body.url;
-
+  console.log(uri);
   if (!util.isValidUrl(uri)) {
     console.log('Not a valid url: ', uri);
     return res.sendStatus(404);
@@ -75,8 +81,55 @@ function(req, res) {
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
+app.get('/login', function(req,res) {
+  console.log('before session',req.session);
+  res.render('login');
+});
 
+app.post('/login', function(req,res) {
+  var found = User.where( {
+       username: req.body.username
+     }).fetch().then( (user) => {
+      //console.log('ID of user found',user);
+       if(user !== null) {
+         bcrypt.compare(req.body.password, user.attributes.password, function(err, result) {
+           console.log('result in compare',result, err, user.attributes.password);
+           if(!result) {
+             res.redirect('/login');
+           } else {
+             req.session.username = req.body.username;
+             req.session.password = req.body.password;
+             res.redirect('/');
+           }
+         });
+       } else {
+         res.redirect('/signup');
+       }
+       //console.log('after stuff session', req.session);
+     })
+});
 
+app.get('/signup', function(req, res) {
+  res.render('signup');
+});
+
+app.post('/signup', function(req, res) {
+  new User({
+    'username': req.body.username,
+    'password': req.body.password
+  }).save().then(function(model) {
+    req.session.username = req.body.username;
+    req.session.password = req.body.password;
+    res.redirect('/');
+  }).catch(function(err) {
+    console.log('*******************************', err)
+  });
+})
+
+app.get('/logout', function(req, res) {
+  req.session = null;
+  res.redirect('/login');
+})
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
@@ -102,5 +155,24 @@ app.get('/*', function(req, res) {
     }
   });
 });
+
+function checkUser(req, res, next) {
+  console.log('req.session',req.session, req.url);
+  if(req.session.username && req.session.password) {
+    User.where( {
+        username: req.session.username
+      }).fetch().then( (user) => {
+        bcrypt.compare(req.session.password, user.attributes.password, function(err, result) {
+          if(!result) {
+            res.redirect('/login');
+          } else {
+            next();
+          }
+        });
+      })
+  } else {
+    res.redirect('/login');
+  }
+}
 
 module.exports = app;

@@ -14,23 +14,23 @@ var Link = require('../app/models/link');
 // Remove the 'x' from beforeEach block when working on
 // authentication tests.
 /************************************************************/
-var xbeforeEach = function() {};
+//var beforeEach = function() {};
 /************************************************************/
 
 
 describe('', function() {
 
-  var server;
-
-  before(function() {
-    server = app.listen(4568, function() {
-      console.log('Shortly is listening on 4568');
-    });
-  });
-
-  after(function() {
-    server.close();
-  });
+//  var server;
+  //
+  // before(function() {
+  //   server = app.listen(4568, function() {
+  //     console.log('Shortly is listening on 4568');
+  //   });
+  // });
+  //
+  // after(function() {
+  //   server.close();
+  // });
 
   beforeEach(function() {
     // log out currently signed in user
@@ -53,10 +53,10 @@ describe('', function() {
       .del()
       .catch(function(error) {
         // uncomment when writing authentication tests
-        // throw {
-        //   type: 'DatabaseError',
-        //   message: 'Failed to create test setup data'
-        // };
+        throw {
+          type: 'DatabaseError',
+          message: 'Failed to create test setup data'
+        };
       });
 
     // delete user Phillip from db so it can be created later for the test
@@ -65,10 +65,10 @@ describe('', function() {
       .del()
       .catch(function(error) {
         // uncomment when writing authentication tests
-        // throw {
-        //   type: 'DatabaseError',
-        //   message: 'Failed to create test setup data'
-        // };
+        throw {
+          type: 'DatabaseError',
+          message: 'Failed to create test setup data'
+        };
       });
   });
 
@@ -76,8 +76,9 @@ describe('', function() {
 
     var requestWithSession = request.defaults({jar: true});
 
-    xbeforeEach(function(done) {
+    beforeEach(function(done) {
       // create a user that we can then log-in with
+      console.log('in before each link creation');
       new User({
         'username': 'Phillip',
         'password': 'Phillip'
@@ -108,6 +109,7 @@ describe('', function() {
       };
 
       requestWithSession(options, function(error, res, body) {
+      //  console.log(res.body);
         // res comes from the request module, and may not follow express conventions
         expect(res.statusCode).to.equal(404);
         done();
@@ -226,7 +228,7 @@ describe('', function() {
 
   }); // 'Link creation'
 
-  xdescribe('Privileged Access:', function() {
+  describe('Privileged Access:', function() {
 
     it('Redirects to login page if a user tries to access the main page and is not signed in', function(done) {
       request('http://127.0.0.1:4568/', function(error, res, body) {
@@ -251,7 +253,7 @@ describe('', function() {
 
   }); // 'Priviledged Access'
 
-  xdescribe('Account Creation:', function() {
+  describe('Account Creation:', function() {
 
     it('Signup creates a user record', function(done) {
       var options = {
@@ -299,7 +301,7 @@ describe('', function() {
 
   }); // 'Account Creation'
 
-  xdescribe('Account Login:', function() {
+  describe('Account Login:', function() {
 
     var requestWithSession = request.defaults({jar: true});
 
@@ -339,7 +341,7 @@ describe('', function() {
       };
 
       requestWithSession(options, function(error, res, body) {
-        expect(res.headers.location).to.equal('/login');
+        expect(res.headers.location).to.equal('/signup');
         done();
       });
     });
